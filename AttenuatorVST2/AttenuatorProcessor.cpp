@@ -46,11 +46,6 @@ void AttenuatorProcessor::processReplacing (float** inputs, float** outputs, Vst
    float* out1 = outputs[0];
    float* out2 = outputs[1];
 
-   for(VstInt32 i = 0; i < sampleFrames; ++i) {
-      (*out1++) = (*in1++);
-      (*out2++) = (*in2++);
-   }
-
    float newGain = getSmoothedValue(mGain);
    float gainStep = (newGain - mLastGain) / sampleFrames;
 
@@ -70,12 +65,6 @@ void AttenuatorProcessor::processDoubleReplacing (double** inputs, double** outp
    double* in2  =  inputs[1];
    double* out1 = outputs[0];
    double* out2 = outputs[1];
-
-
-   for(VstInt32 i = 0; i < sampleFrames; ++i) {
-      (*out1++) = (*in1++);
-      (*out2++) = (*in2++);
-   }
 
    float newGain = getSmoothedValue(mGain);
    float gainStep = (newGain - mLastGain) / sampleFrames;
