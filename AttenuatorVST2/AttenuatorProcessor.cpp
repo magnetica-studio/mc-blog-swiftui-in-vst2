@@ -8,6 +8,7 @@
 
 #include "AttenuatorProcessor.hpp"
 #include "AttenuatorEditor.hpp" // 1️⃣ Imported new header.
+#include <algorithm>
 
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
    return new AttenuatorProcessor(audioMaster);
@@ -22,9 +23,12 @@ AttenuatorProcessor::AttenuatorProcessor(audioMasterCallback audioMaster)
    canDoubleReplacing ();  // supports double precision processing
    
    mGain = 1.f;           // default to 0 dB
+   mLastGain = mGain;
    vst_strncpy(programName, "Default", kVstMaxProgNameLen);   // default program name
    
    this->setEditor (new AttenuatorEditor(this)); // 2️⃣ Using editor.
+
+   std::fill(mGainHistory.begin(), mGainHistory.end(), 0.0);
 }
 
 AttenuatorProcessor::~AttenuatorProcessor() {
@@ -34,30 +38,54 @@ AttenuatorProcessor::~AttenuatorProcessor() {
 // MARK: - Processing
 
 void AttenuatorProcessor::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) {
-   
+
+    if(sampleFrames == 0) { return; }
+
    float* in1  =  inputs[0];
    float* in2  =  inputs[1];
    float* out1 = outputs[0];
    float* out2 = outputs[1];
-   
-   while (--sampleFrames >= 0) {
-      (*out1++) = (*in1++) * mGain;
-      (*out2++) = (*in2++) * mGain;
+
+   for(VstInt32 i = 0; i < sampleFrames; ++i) {
+      (*out1++) = (*in1++);
+      (*out2++) = (*in2++);
    }
+
+   float newGain = getSmoothedValue(mGain);
+   float gainStep = (newGain - mLastGain) / sampleFrames;
+
+   for(VstInt32 i = 0; i < sampleFrames; ++i) {
+      (*out1++) = (*in1++) * (mLastGain + gainStep * i);
+      (*out2++) = (*in2++) * (mLastGain + gainStep * i);
+   }
+
+   mLastGain = newGain;
 }
 
 void AttenuatorProcessor::processDoubleReplacing (double** inputs, double** outputs, VstInt32 sampleFrames) {
-   
+
+   if(sampleFrames == 0) { return; }
+
    double* in1  =  inputs[0];
    double* in2  =  inputs[1];
    double* out1 = outputs[0];
    double* out2 = outputs[1];
-   double dGain = mGain;
-   
-   while (--sampleFrames >= 0) {
-      (*out1++) = (*in1++) * dGain;
-      (*out2++) = (*in2++) * dGain;
+
+
+   for(VstInt32 i = 0; i < sampleFrames; ++i) {
+      (*out1++) = (*in1++);
+      (*out2++) = (*in2++);
    }
+
+   float newGain = getSmoothedValue(mGain);
+   float gainStep = (newGain - mLastGain) / sampleFrames;
+
+   for(VstInt32 i = 0; i < sampleFrames; ++i) {
+      (*out1++) = (*in1++) * (mLastGain + gainStep * i);
+      (*out2++) = (*in2++) * (mLastGain + gainStep * i);
+   }
+
+   mLastGain = newGain;
 }
 
 // MARK: - Programs
@@ -117,4 +145,18 @@ bool AttenuatorProcessor::getProductString (char* text) {
 bool AttenuatorProcessor::getVendorString (char* text) {
    vst_strncpy(text, "Vlad Gorlov", kVstMaxVendorStrLen);
    return true;
+}
+
+float AttenuatorProcessor::getSmoothedValue(float newGain)
+{
+    mGainHistory[mGainHistoryIndex] = newGain;
+    float ret = 0;
+    for(int i = 0; i < mGainHistory.size(); ++i) {
+        ret += mGainHistory[i];
+    }
+    ret /= mGainHistory.size();
+    mGainHistoryIndex += 1;
+    if(mGainHistoryIndex >= mGainHistory.size()) { mGainHistoryIndex = 0; }
+
+    return ret;
 }

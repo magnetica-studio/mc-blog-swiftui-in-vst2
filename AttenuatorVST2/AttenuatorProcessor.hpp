@@ -10,6 +10,7 @@
 #define AttenuatorProcessor_hpp
 
 #include "audioeffectx.h"
+#include <array>
 
 class AttenuatorProcessor : public AudioEffectX {
 public:
@@ -44,7 +45,12 @@ public:
 private:
    bool mIsUpdatingGain; // 1️⃣ Used to avoid parameter change loopback.
    float mGain;
+   float mLastGain;
+   std::array<float, 6> mGainHistory;
+   int mGainHistoryIndex = 0;
    char programName[kVstMaxProgNameLen + 1];
+
+   float getSmoothedValue(float newGain);
 };
 
 #endif /* AttenuatorProcessor_hpp */

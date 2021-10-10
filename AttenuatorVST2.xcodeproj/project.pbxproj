@@ -474,6 +474,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 808BBD3C243205260053814A /* AttenuatorVST2.xcconfig */;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = "$(VST2_SDK)/**";
 			};
 			name = Release;
 		};
